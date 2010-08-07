@@ -1,0 +1,8 @@
+; $Id: userpoints_nodeaccess.info,v 1.1.2.3 2009/11/01 01:00:05 betz Exp $
+
+name = Userpoints Nodeaccess
+description = Sell access to a single node for a specific category and amount of userpoints.
+core = 7.x
+dependencies[] = userpoints
+files[]=userpoints_nodeaccess.module
+package = Userpoints
