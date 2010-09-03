@@ -13,6 +13,11 @@ function theme_userpoints_nodeaccess_node_points_information($variables) {
     '@price' => $variables['price'],
   );
 
-  $output = t('To access this content, you must trade in @price !points of the category @category. You currently have @points !points in the @category category.', array_merge(userpoints_translation(), $args));
+  if ($variables['price'] <= $variables['points']) {
+    $output = t('Trade in @price !points to access this content. You have @points !points available. Only !points in the @category category may be used.', array_merge(userpoints_translation(), $args));
+  }
+  else {
+    $output = t('@price !points are required to access this content. You currently have @points !points available and need more !points. Only !points in the @category category may be used.', array_merge(userpoints_translation(), $args));
+  }
   return '<div>' . $output . '</div>';
 }

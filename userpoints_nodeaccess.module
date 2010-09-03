@@ -59,17 +59,19 @@ function userpoints_nodeaccess_userpoints($op, $points = NULL) {
       '#collapsible' => TRUE,
     );
 
-    $form['userpoints_nodeaccess']['userpoints_nodeaccess_messagealreadybought'] = array(
+    $form['userpoints_nodeaccess']['userpoints_nodeaccess_enabled'] = array(
       '#type' => 'checkbox',
-      '#title' => t('Show a message when the user already bought access to the node.'),
-      '#default_value' => variable_get('userpoints_nodeaccess_messagealreadybought', 0) ,
+      '#title' => t('Enabled by default'),
+      '#default_value' => variable_get('userpoints_nodeaccess_enabled', TRUE),
+      '#description' => t('This can be overridden for each content type.'),
     );
+
     $form['userpoints_nodeaccess']['userpoints_nodeaccess_default_category'] = array(
       '#type' => 'select',
-      '#title' => t('Default Points Category'),
+      '#title' => t('Default Category'),
       '#default_value' => variable_get('userpoints_nodeaccess_default_category', 0),
       '#options' => userpoints_get_categories(),
-      '#description' => t('Choose a default !Points category.', userpoints_translation()),
+      '#description' => t('Choose a default !Points category. This can be overridden for each content type.', userpoints_translation()),
     );
     return $form;
   }
@@ -81,7 +83,7 @@ function userpoints_nodeaccess_userpoints($op, $points = NULL) {
 function userpoints_nodeaccess_form_alter(&$form, $form_state, $form_id) {
   global $user;
 
-  if (!empty($form['#node_edit_form'])) {
+  if (!empty($form['#node_edit_form']) && variable_get('userpoints_nodeaccess_enabled_' . $form['#node']->type, variable_get('userpoints_nodeaccess_enabled', TRUE))) {
     $form['userpoints_nodeaccess'] = array(
       '#type' => 'fieldset',
       '#title' => t('Userpoints Nodeaccess Options'),
@@ -99,19 +101,80 @@ function userpoints_nodeaccess_form_alter(&$form, $form_state, $form_id) {
       ),
       '#attributes' => array('class' => array('userpoints-nodeaccess-form')),
     );
-    $form['userpoints_nodeaccess']['points_price'] = array(
+    $form['userpoints_nodeaccess']['userpoints_nodeaccess_points_price'] = array(
       '#type' => 'textfield',
       '#title' => t('!Points', userpoints_translation()),
-      '#default_value' => $form['#node']->points_price,
-      '#maxlength' => 128,
-      '#description' => t('Set a price in !points that is required to access this node. All users have access if this field is left empty.', userpoints_translation()),
+      '#default_value' => $form['#node']->userpoints_nodeaccess_points_price,
+      '#description' => t('Set a price in points that is required to access this content. All users will have access if you enter "0" or this field is left empty.', userpoints_translation()),
     );
-    $form['userpoints_nodeaccess']['points_category'] = array(
+    $form['userpoints_nodeaccess']['userpoints_nodeaccess_points_category'] = array(
       '#type' => 'select',
-      '#title' => t('Points Category'),
-      '#default_value' => $form['#node']->points_category,
+      '#title' => t('Category'),
+      '#default_value' => $form['#node']->userpoints_nodeaccess_points_category,
       '#options' => userpoints_get_categories(),
       '#description' => t('Choose the !points category that shall be used when users trade in their !points.', userpoints_translation()),
+    );
+  }
+}
+
+function userpoints_nodeaccess_form_node_type_form_alter(&$form, &$form_state) {
+  $form['userpoints_nodeaccess'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Userpoints Nodeaccess Options'),
+    '#collapsible' => TRUE,
+    '#collapsed' => FALSE,
+    '#access' => user_access('administer userpoints'),
+    '#weight' => 30,
+    '#group' => 'additional_settings',
+    '#attached' => array(
+      'js' => array(
+        'userpoints_nodeaccess' => drupal_get_path('module', 'userpoints_nodeaccess') . '/userpoints_nodeaccess.js',
+      ),
+    ),
+    '#attributes' => array('class' => array('userpoints-nodeaccess-nodetype-form')),
+  );
+
+  $form['userpoints_nodeaccess']['userpoints_nodeaccess_enabled'] = array(
+    '#type' => 'checkbox',
+    '#title' => t('Enabled'),
+    '#default_value' => variable_get('userpoints_nodeaccess_enabled_' . $form['#node_type']->type, variable_get('userpoints_nodeaccess_enabled', TRUE)),
+    '#description' => t('If checked, a price in !points can be set to access content of this type.', userpoints_translation()),
+  );
+
+  $form['userpoints_nodeaccess']['userpoints_nodeaccess_points_price'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Default !Points', userpoints_translation()),
+    '#default_value' => variable_get('userpoints_nodeaccess_points_price_' . $form['#node_type']->type, 0),
+    '#description' => t('Set a default price in !points that is required to access content of this type.', userpoints_translation()),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="userpoints_nodeaccess_enabled"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+  $form['userpoints_nodeaccess']['userpoints_nodeaccess_points_category'] = array(
+    '#type' => 'select',
+    '#title' => t('Default Category'),
+    '#default_value' => variable_get('userpoints_nodeaccess_points_category_' . $form['#node_type']->type, variable_get('userpoints_nodeaccess_default_category', 0)),
+    '#options' => userpoints_get_categories(),
+    '#description' => t('Choose the default !points category that shall be used when users trade in their !points.', userpoints_translation()),
+    '#states' => array(
+      'visible' => array(
+        ':input[name="userpoints_nodeaccess_enabled"]' => array('checked' => TRUE),
+      ),
+    ),
+  );
+
+  if (!empty($form['#node_type']->type)) {
+    $url = url('admin/structure/types/manage/' . $form['#node_type']->type . '/display/userpoints_nodeaccess');
+    $form['userpoints_nodeaccess']['userpoints_nodeaccess_manage_item'] = array(
+      '#type' => 'item',
+      '#markup' => t('You can control how the content appears to users who do not have access by going to the <a href="@manage_display_url">Manage display screen</a>.', array('@manage_display_url' => $url)),
+      '#states' => array(
+        'visible' => array(
+          ':input[name="userpoints_nodeaccess_enabled"]' => array('checked' => TRUE),
+        ),
+      ),
     );
   }
 }
@@ -136,22 +199,15 @@ function userpoints_nodeaccess_update_node($node) {
   if (!(user_access('set required userpoints for any node') || (user_access('set required userpoints for own node') && $form['#node']->uid == $user->uid))) {
     return;
   }
-  if (empty($node->points_price)) {
-    db_delete('userpoints_nodeaccess_points')
-      ->condition('nid', $node->nid)
-      ->execute();
-  }
-  else {
-    db_merge('userpoints_nodeaccess_points')
-      ->key(array(
-        'nid' => $node->nid,
-      ))
-      ->fields(array(
-        'points' => $node->points_price,
-        'tid' => $node->points_category,
-      ))
-      ->execute();
-  }
+  db_merge('userpoints_nodeaccess_points')
+    ->key(array(
+      'nid' => $node->nid,
+    ))
+    ->fields(array(
+      'points' => $node->userpoints_nodeaccess_points_price,
+      'tid' => $node->userpoints_nodeaccess_points_category,
+    ))
+    ->execute();
 }
 
 function userpoints_nodeaccess_node_load($nodes) {
@@ -159,22 +215,23 @@ function userpoints_nodeaccess_node_load($nodes) {
   $points = db_query("SELECT nid, points, tid FROM {userpoints_nodeaccess_points} WHERE nid IN (:nids)", array(':nids' => array_keys($nodes)))->fetchAllAssoc('nid');
 
   foreach ($nodes as $node) {
-    // Default values.
-    $node->points_price = 0;
-    $node->points_category = variable_get('userpoints_nodeaccess_default_category', 0);
 
     if (isset($points[$node->nid])) {
-      $node->points_price = $points[$node->nid]->points;
-      $node->points_category = $points[$node->nid]->tid;
+      $node->userpoints_nodeaccess_points_price = $points[$node->nid]->points;
+      $node->userpoints_nodeaccess_points_category = $points[$node->nid]->tid;
+    } else {
+      // Default values.
+      $node->userpoints_nodeaccess_points_price = variable_get('userpoints_nodeaccess_points_price_' . $node->type, 0);
+      $node->userpoints_nodeaccess_points_category = variable_get('userpoints_nodeaccess_points_category_' . $node->type, variable_get('userpoints_nodeaccess_default_category', 0));
     }
   }
 }
 
 function userpoints_nodeaccess_node_prepare($node) {
-  // Default values if this is a new node.
+  // Add default values if this is a new node.
   if (empty($node->nid)) {
-    $node->points_price = 0;
-    $node->points_category = variable_get('userpoints_nodeaccess_default_category', 0);
+    $node->userpoints_nodeaccess_points_price = variable_get('userpoints_nodeaccess_points_price_' . $node->type, 0);
+    $node->userpoints_nodeaccess_points_category = variable_get('userpoints_nodeaccess_points_category_' . $node->type, variable_get('userpoints_nodeaccess_default_category', 0));
   }
 }
 
@@ -186,10 +243,15 @@ function userpoints_nodeaccess_node_view_alter(&$build) {
     return;
   }
 
+  // Check if node type is enabled.
+  if (!variable_get('userpoints_nodeaccess_enabled_' . $build['#node']->type, variable_get('userpoints_nodeaccess_enabled', TRUE))) {
+    return;
+  }
+
   if (userpoints_nodeaccess_is_protected($build['#node']->nid)) {
-    $current_points = userpoints_get_current_points($user->uid, $build['#node']->points_category);
+    $current_points = userpoints_get_current_points($user->uid, $build['#node']->userpoints_nodeaccess_points_category);
     $categories = userpoints_get_categories();
-    $category = $categories[$build['#node']->points_category];
+    $category = $categories[$build['#node']->userpoints_nodeaccess_points_category];
 
     if (!userpoints_nodeaccess_has_access($build['#node']->nid, $user->uid)) {
       // Re-populate $build with a different view mode.
@@ -214,31 +276,22 @@ function userpoints_nodeaccess_node_view_alter(&$build) {
         $build['trade'] = array('#markup' => t('You do not have access to this content.'));
       }
     }
-    else {
-      // User already got access to the node.
-      if (variable_get('userpoints_nodeaccess_messagealreadybought', 0)) {
-        $args = array_merge(userpoints_translation(), array(
-          '@category' => $category,
-          '@points' => $current_points,
-          '@price' => $build['#node']->points_price,
-        ));
-        drupal_set_message(t('By trading in @price !points in category @category, you now have full access to this content. Enjoy!', $args));
-      }
-    }
   }
 }
 
 /**
  * Displays a form which can be used to get access to a node.
  */
-function userpoints_nodeaccess_trade_access_form($form, &$form_state, $node, $current_points, $category) {
+function userpoints_nodeaccess_trade_access_form($form, &$form_state, $node, $current_points, $category, $simple = FALSE) {
   global $user;
 
-  $form['information'] = array(
-    '#markup' => theme('userpoints_nodeaccess_node_points_information', array('category' => $category, 'points' => $current_points, 'price' => $node->points_price))
-  );
+  if (!$simple) {
+    $form['information'] = array(
+      '#markup' => theme('userpoints_nodeaccess_node_points_information', array('category' => $category, 'points' => $current_points, 'price' => $node->userpoints_nodeaccess_points_price))
+    );
+  }
 
-  if ($current_points > $node->points_price) {
+  if ($current_points > $node->userpoints_nodeaccess_points_price) {
     $form['nid'] = array(
       '#type' => 'value',
       '#value' => $node->nid
@@ -274,11 +327,12 @@ function userpoints_nodeaccess_trade_access_form_submit($form, &$form_state) {
     if (!$row) {
       return;
     }
-    $nodepoints = $row->points;
     $tid = $row->tid;
 
-    $currentpoints = userpoints_get_current_points($uid, $tid);
-    if ($currentpoints >= $nodepoints) {
+    $current_points = userpoints_get_current_points($uid, $tid);
+    $categories = userpoints_get_categories();
+    $category = $categories[$row->tid];
+    if ($current_points >= $row->points) {
       db_insert('userpoints_nodeaccess')
         ->fields(array(
           'nid' => $nid,
@@ -288,12 +342,20 @@ function userpoints_nodeaccess_trade_access_form_submit($form, &$form_state) {
         ->execute();
       $params = array(
         'uid' => $uid,
-        'points' => -$nodepoints,
+        'points' => -$row->points,
         'tid' => $tid,
         'operation' => 'Substract',
         'description' => t('User bought access to @node', array('@node' => node_load($nid)->title)),
+        'display' => FALSE,
       );
       userpoints_userpointsapi($params);
+
+      $args = array_merge(userpoints_translation(), array(
+        '@category' => $category,
+        '@points' => $current_points,
+        '@price' => $row->points,
+      ));
+      drupal_set_message(t('By trading in @price !points in @category category, you now have full access to this content.', $args));
     }
     else {
       drupal_set_message(t("You don't have enough !points to get access.", userpoints_translation()));

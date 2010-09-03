@@ -2,7 +2,11 @@
 
 name = Userpoints Nodeaccess Views
 description = Userpoints Nodeaccess Views integration
-core = 6.x
+core = 7.x
 dependencies[] = userpoints_nodeaccess
 dependencies[] = views
 package = Userpoints
+files[]=userpoints_nodeaccess_handler_field_buyaccess.inc
+files[]=userpoints_nodeaccess_views.views.inc
+files[]=userpoints_nodeaccess_views.views_default.inc
+files[]=userpoints_nodeaccess_views.module
