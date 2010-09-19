@@ -274,7 +274,7 @@ function userpoints_nodeaccess_node_view_alter(&$build) {
           '#markup' => theme('userpoints_nodeaccess_node_points_information', array('category' => $category, 'points' => $current_points, 'price' => $node->userpoints_nodeaccess_points_price))
         );
         if ($current_points > $build['#node']->userpoints_nodeaccess_points_price) {
-          $build['userpoints_nodeaccess_form'] = drupal_get_form('userpoints_nodeaccess_trade_access_form', $build['#node']);
+          $build['userpoints_nodeaccess_form'] = drupal_get_form('userpoints_nodeaccess_trade_access_form', $build['#node']->nid);
         }
       }
       else {
@@ -299,7 +299,7 @@ function userpoints_nodeaccess_trade_access_form($form, &$form_state, $nid) {
   $form['submit'] = array(
     '#type' => 'submit',
     '#value' =>  t('Get access'),
-    '#id' => 'edit-submit-'. $nid,
+    '#id' => 'edit-submit-' . $nid,
     '#attributes' => array(
       'class' => array('userpoints-nodeaccess', 'userpoints-nodeaccess-getaccess'),
     ),
