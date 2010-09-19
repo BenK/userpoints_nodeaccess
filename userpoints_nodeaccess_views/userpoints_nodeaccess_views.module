@@ -1,13 +1,10 @@
 <?php
-// $Id;
-
+// $Id$
 
 /**
  * @file
  * This module integrates views with the userpoints nodeaccess module.
  */
-
-
 
 /**
  *  Implement hook_views_api().

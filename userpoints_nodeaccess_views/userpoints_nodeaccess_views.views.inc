@@ -1,5 +1,5 @@
 <?php
-// $Id;
+// $Id$
 
 
 /**
@@ -83,8 +83,8 @@ function userpoints_nodeaccess_views_views_data() {
   );
 
   $data['userpoints_nodeaccess_points']['nid'] = array(
-    'title' => t('Buy Access Button'),
-    'help' => t('Shows a buy access button.'),
+    'title' => t('Access Status'),
+    'help' => t('Shows whether the current user can access each node.'),
     'field' => array(
       'handler' => 'userpoints_nodeaccess_handler_field_buyaccess',
       'click sortable' => FALSE,
@@ -100,6 +100,9 @@ function userpoints_nodeaccess_views_views_data() {
     ),
     'filter' => array(
       'handler' => 'views_handler_filter_numeric',
+    ),
+    'sort' => array(
+      'handler' => 'views_handler_sort',
     ),
   );
   

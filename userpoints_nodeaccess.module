@@ -63,12 +63,12 @@ function userpoints_nodeaccess_userpoints($op, $points = NULL) {
       '#type' => 'checkbox',
       '#title' => t('Enabled by default'),
       '#default_value' => variable_get('userpoints_nodeaccess_enabled', TRUE),
-      '#description' => t('This can be overridden for each content type.'),
+      '#description' => t('If checked, Userpoints Nodeaccess functionality is activated by default for each content type. This can be overridden on the content type edit page.'),
     );
 
     $form['userpoints_nodeaccess']['userpoints_nodeaccess_default_category'] = array(
       '#type' => 'select',
-      '#title' => t('Default Category'),
+      '#title' => t('Global Default Category'),
       '#default_value' => variable_get('userpoints_nodeaccess_default_category', 0),
       '#options' => userpoints_get_categories(),
       '#description' => t('Choose a default !Points category. This can be overridden for each content type.', userpoints_translation()),
@@ -204,8 +204,8 @@ function userpoints_nodeaccess_update_node($node) {
       'nid' => $node->nid,
     ))
     ->fields(array(
-      'points' => $node->userpoints_nodeaccess_points_price,
-      'tid' => $node->userpoints_nodeaccess_points_category,
+      'points' => (int)$node->userpoints_nodeaccess_points_price,
+      'tid' => (int)$node->userpoints_nodeaccess_points_category,
     ))
     ->execute();
 }
@@ -270,10 +270,17 @@ function userpoints_nodeaccess_node_view_alter(&$build) {
       );
 
       if (user_access('trade userpoints for node access')) {
-        $build['trade'] = drupal_get_form('userpoints_nodeaccess_trade_access_form', $build['#node'], $current_points, $category);
+        $build['userpoints_nodeaccess_information'] = array(
+          '#markup' => theme('userpoints_nodeaccess_node_points_information', array('category' => $category, 'points' => $current_points, 'price' => $node->userpoints_nodeaccess_points_price))
+        );
+        if ($current_points > $build['#node']->userpoints_nodeaccess_points_price) {
+          $build['userpoints_nodeaccess_form'] = drupal_get_form('userpoints_nodeaccess_trade_access_form', $build['#node']);
+        }
       }
       else {
-        $build['trade'] = array('#markup' => t('You do not have access to this content.'));
+        $build['userpoints_no_access'] = array(
+          '#markup' => t('Requires @points !points in the @category category.', array_merge(userpoints_translation(), array('@category' => $category, '@points' => $build['#node']->userpoints_nodeaccess_points_price)))
+        );
       }
     }
   }
@@ -282,30 +289,21 @@ function userpoints_nodeaccess_node_view_alter(&$build) {
 /**
  * Displays a form which can be used to get access to a node.
  */
-function userpoints_nodeaccess_trade_access_form($form, &$form_state, $node, $current_points, $category, $simple = FALSE) {
+function userpoints_nodeaccess_trade_access_form($form, &$form_state, $nid) {
   global $user;
 
-  if (!$simple) {
-    $form['information'] = array(
-      '#markup' => theme('userpoints_nodeaccess_node_points_information', array('category' => $category, 'points' => $current_points, 'price' => $node->userpoints_nodeaccess_points_price))
-    );
-  }
-
-  if ($current_points > $node->userpoints_nodeaccess_points_price) {
-    $form['nid'] = array(
-      '#type' => 'value',
-      '#value' => $node->nid
-    );
-    $form['submit'] = array(
-      '#type' => 'submit',
-      '#value' =>  t('Get access'),
-      '#id' => 'edit-submit-'. $node->nid,
-      '#attributes' => array(
-        'class' => array('list-get-access'),
-      ),
-    );
-  }
-
+  $form['nid'] = array(
+    '#type' => 'value',
+    '#value' => $nid
+  );
+  $form['submit'] = array(
+    '#type' => 'submit',
+    '#value' =>  t('Get access'),
+    '#id' => 'edit-submit-'. $nid,
+    '#attributes' => array(
+      'class' => array('userpoints-nodeaccess', 'userpoints-nodeaccess-getaccess'),
+    ),
+  );
   return $form;
 }
 
@@ -355,7 +353,7 @@ function userpoints_nodeaccess_trade_access_form_submit($form, &$form_state) {
         '@points' => $current_points,
         '@price' => $row->points,
       ));
-      drupal_set_message(t('By trading in @price !points in @category category, you now have full access to this content.', $args));
+      drupal_set_message(t('By trading in @price !points in the @category category, you now have full access to this content.', $args));
     }
     else {
       drupal_set_message(t("You don't have enough !points to get access.", userpoints_translation()));

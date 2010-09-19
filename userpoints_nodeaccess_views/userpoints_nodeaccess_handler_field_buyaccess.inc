@@ -1,5 +1,5 @@
 <?php
-// $Id: uc_product_handler_field_buyitnow.inc,v 1.1.2.3 2009/05/07 20:52:29 islandusurper Exp $
+// $Id$
 
 /**
  * @file
@@ -18,6 +18,10 @@ class userpoints_nodeaccess_handler_field_buyaccess extends views_handler_field 
   public function init(&$view, &$options) {
     parent::init($view, $options);
     $this->additional_fields['nid'] = array('table' => 'node', 'field' => 'nid');
+    $this->additional_fields['type'] = array('table' => 'node', 'field' => 'type');
+    $this->additional_fields['uid'] = array('table' => 'node', 'field' => 'uid');
+    $this->additional_fields['category'] = array('table' => 'userpoints_nodeaccess_points', 'field' => 'tid');
+    $this->additional_fields['points'] = array('table' => 'userpoints_nodeaccess_points', 'field' => 'points');
   }
 
   function element_type() {
@@ -30,42 +34,38 @@ class userpoints_nodeaccess_handler_field_buyaccess extends views_handler_field 
   function render($values) {
     global $user;
 
-    $node = node_load($values->nid);
+    $nid = $values->{$this->aliases['nid']};
+    $type = $values->{$this->aliases['type']};
+    $uid = $values->{$this->aliases['uid']};
+    $category = $values->{$this->aliases['category']};
+    $points = $values->{$this->aliases['points']};
 
     // Check if node type is enabled and node as points assigned.
-    if (empty($node->userpoints_nodeaccess_points_price) || !variable_get('userpoints_nodeaccess_enabled_' . $node->type, variable_get('userpoints_nodeaccess_enabled', TRUE))) {
-      return t('No points required');
+    if (empty($points) || !variable_get('userpoints_nodeaccess_enabled_' . $type, variable_get('userpoints_nodeaccess_enabled', TRUE))) {
+      return '<span class="userpoints-nodeaccess userpoints-nodeaccess-unlimited">' . t('Unlimited Access') . '</span>';
     }
 
-    // Don't limit access to users with bypass permission or the author.
-    if ($bypass_access = user_access('bypass node access')) {
-      return t('Unlimited access');
-    }
-
-    // Check author access.
-    if ($node->uid == $user->uid) {
-      return t('Author access granted.');
-    }
-
-    // Check if user already has access.
-    if (userpoints_nodeaccess_has_access($values->nid, $user->uid)) {
-      return t('Access granted');
+    // Don't limit access to users with bypass permission, the author or if the
+    // user already has access.
+    if (user_access('bypass node access') || $uid == $user->uid || userpoints_nodeaccess_has_access($nid, $user->uid)) {
+      return '<span class="userpoints-nodeaccess userpoints-nodeaccess-granted">' . t('Granted') . '</span>';
     }
 
     // Check if user is allowed to trade points.
     if (!user_access('trade userpoints for node access')) {
-      return t('Access denied');
+      return '<span class="userpoints-nodeaccess userpoints-nodeaccess-denied">' . t('Denied') . '</span>';
     }
 
-    $current_points = userpoints_get_current_points($user->uid, $node->userpoints_nodeaccess_points_category);
+    $current_points = userpoints_get_current_points($user->uid, $category);
     $categories = userpoints_get_categories();
-    $category = $categories[$node->userpoints_nodeaccess_points_category];
+    $category = $categories[$category];
 
     // Check if user has enough points.
-    if ($current_points < $node->userpoints_nodeaccess_points_price) {
-      return t('Need more points.');
+    $difference = $points - $current_points;
+    if ($difference > 0) {
+      return '<span class="userpoints-nodeaccess userpoints-nodeaccess-needmore">' . t('Need @points more !points', array_merge(userpoints_translation(), array('@points' => $difference)));
     }
 
-    return drupal_render(drupal_get_form('userpoints_nodeaccess_trade_access_form', $node, $current_points, $category, TRUE));
+    return drupal_render(drupal_get_form('userpoints_nodeaccess_trade_access_form', $nid));
   }
 }
